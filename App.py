@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
 
-st.title("حاسبة المستحقات السنوية حسب الراتب")
+st.title("حاسبة المستحقات التراكمية حسب الراتب السنوي")
 
-# بيانات من الصورة (نسبة المستحقات لكل شهر)
+# البيانات المستخرجة من الصورة
 data = {
     "الشهر": [
         "Nov-21", "Dec-21",
@@ -22,26 +22,31 @@ data = {
 }
 
 df = pd.DataFrame(data)
-
-# تحويل الشهر إلى سنة فقط
 df["السنة"] = df["الشهر"].apply(lambda x: "20" + x.split("-")[1])
 
-# إدخال الراتب الشهري
-salary = st.number_input("أدخل الراتب الشهري (بالريال)", min_value=0.0, step=100.0)
+# الحصول على قائمة السنوات
+years = sorted(df["السنة"].unique())
 
-# اختيار السنة
-selected_year = st.selectbox("اختر السنة", sorted(df["السنة"].unique()))
+# واجهة إدخال الراتب لكل سنة
+st.header("أدخل الراتب الشهري لكل سنة:")
+salary_inputs = {}
+for year in years:
+    salary_inputs[year] = st.number_input(f"الراتب الشهري لسنة {year} (ريال)", min_value=0.0, step=100.0, format="%.2f")
 
-# تصفية البيانات حسب السنة المختارة
-filtered = df[df["السنة"] == selected_year].copy()
+# حساب المستحقات لكل سنة
+results = []
+for year in years:
+    months = df[df["السنة"] == year]
+    salary = salary_inputs[year]
+    months["مستحقات_شهرية"] = salary * (months["نسبة_المستحقات"] / 100)
+    total = months["مستحقات_شهرية"].sum()
+    results.append({"السنة": year, "إجمالي المستحقات (ريال)": total})
 
-# حساب المستحقات لكل شهر
-filtered["المبلغ_المستحق"] = salary * (filtered["نسبة_المستحقات"] / 100)
+# عرض النتائج
+result_df = pd.DataFrame(results)
+st.subheader("إجمالي المستحقات لكل سنة:")
+st.dataframe(result_df)
 
-# عرض التفاصيل
-st.write(f"تفاصيل المستحقات لعام {selected_year}:")
-st.dataframe(filtered[["الشهر", "نسبة_المستحقات", "المبلغ_المستحق"]])
-
-# مجموع المستحقات السنوية
-total = filtered["المبلغ_المستحق"].sum()
-st.subheader(f"إجمالي المستحقات لعام {selected_year}: {total:,.2f} ريال")
+# عرض المجموع النهائي
+grand_total = result_df["إجمالي المستحقات (ريال)"].sum()
+st.subheader(f"المجموع الكلي لجميع المستحقات: {grand_total:,.2f} ريال")
