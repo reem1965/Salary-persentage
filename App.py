@@ -20,7 +20,7 @@ def increment_counter():
 
 # عرض عداد الزوار
 count = increment_counter()
-st.markdown(f"### عدد زوار الصفحة: **{count}**")
+st.markdown(f"<div style='padding: 10px; background-color: #f0f0f0; border-radius: 5px;'><strong>عدد زوار الصفحة:</strong> **{count}**</div>", unsafe_allow_html=True)
 
 # --- بيانات المستحقات ---
 months = [
@@ -64,7 +64,8 @@ total = summary["monthly_amount"].sum()
 
 st.subheader("المستحقات حسب كل سنة")
 for _, row in summary.iterrows():
-    st.write(f"سنة {row['year']}: {row['monthly_amount']:,} شيكل")
+    st.markdown(f"<div style='padding: 10px; background-color: #e1e1e1; border-radius: 5px;'>سنة {row['year']}: {row['monthly_amount']:,} شيكل</div>", unsafe_allow_html=True)
 
 st.markdown("---")
 st.subheader(f"المجموع الكلي للمستحقات: {total:,} شيكل")
+st.markdown(f"<div style='padding: 15px; background-color: #c1e1c1; border-radius: 10px;'><strong>المجموع الكلي للمستحقات: {total:,} شيكل</strong></div>", unsafe_allow_html=True)
