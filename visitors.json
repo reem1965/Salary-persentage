@@ -1,5 +1,0 @@
-# قبل:
-ip = st.experimental_get_query_params().get("ip", ["unknown"])[0]
-
-# بعد:
-ip = st.query_params.get("ip", ["unknown"])[0]
