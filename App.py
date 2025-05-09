@@ -1,28 +1,9 @@
 import streamlit as st
-import json
-import os
 import pandas as pd
 
-# --- عداد الزوار المحلي ---
-COUNTER_FILE = "counter.json"
+st.title("حاسبة المستحقات حسب راتب كل سنة (بالشيكل)")
 
-if not os.path.exists(COUNTER_FILE):
-    with open(COUNTER_FILE, "w") as f:
-        json.dump({"count": 0}, f)
-
-def increment_counter():
-    with open(COUNTER_FILE, "r") as f:
-        data = json.load(f)
-    data["count"] += 1
-    with open(COUNTER_FILE, "w") as f:
-        json.dump(data, f)
-    return data["count"]
-
-# عرض عداد الزوار
-count = increment_counter()
-st.markdown(f"<div style='padding: 10px; background-color: #f0f0f0; border-radius: 5px;'><strong>عدد زوار الصفحة:</strong> **{count}**</div>", unsafe_allow_html=True)
-
-# --- بيانات المستحقات ---
+# البيانات: الشهور والنسب التراكمية
 months = [
     "Nov-21", "Dec-21",
     "Jan-22", "Feb-22", "Mar-22", "Apr-22", "May-22", "Jun-22", "Jul-22", "Aug-22", "Sep-22", "Oct-22", "Nov-22", "Dec-22",
@@ -39,33 +20,36 @@ cumulative_percentages = [
     788.58, 818.58, 848.58, 948.58
 ]
 
+# إعداد الداتا فريم
 df = pd.DataFrame({
-    "month": months,
-    "cumulative_percentage": cumulative_percentages
+    "الشهر": months,
+    "النسبة_التراكمية": cumulative_percentages
 })
-df["monthly_percentage"] = df["cumulative_percentage"].diff().fillna(df["cumulative_percentage"])
-df["year"] = df["month"].str[-2:].apply(lambda x: int("20" + x) if x != "21" else 2021)
+df["النسبة_الشهرية"] = df["النسبة_التراكمية"].diff().fillna(df["النسبة_التراكمية"])
 
-st.title("حساب المستحقات حسب الراتب السنوي")
+# تحديد السنة لكل شهر
+df["السنة"] = df["الشهر"].str[-2:].apply(lambda x: int("20" + x) if x != "21" else 2021)
 
-years = sorted(df["year"].unique())
+# إدخال الرواتب لكل سنة
+st.subheader("أدخل الراتب لكل سنة:")
 salaries = {}
+for year in sorted(df["السنة"].unique()):
+    salaries[year] = st.number_input(f"الراتب في سنة {year} (شيكل):", min_value=0.0, step=100.0)
 
-# إدخال الراتب لكل سنة
-for year in years:
-    with st.container():
-        salaries[year] = st.number_input(f"أدخل الراتب لسنة {year}", min_value=0, step=100, value=4500 if year != 2021 else 4450)
+# حساب المستحقات حسب الراتب لكل سنة
+df["الراتب_السنة"] = df["السنة"].map(salaries)
+df["المستحق_هذا_الشهر"] = df["النسبة_الشهرية"] / 100 * df["الراتب_السنة"]
 
-df["salary"] = df["year"].map(salaries)
-df["monthly_amount"] = df["monthly_percentage"] / 100 * df["salary"]
+# حساب المجموع لكل سنة
+summary = df.groupby("السنة")["المستحق_هذا_الشهر"].sum().reset_index()
+summary.columns = ["السنة", "مجموع_المستحقات"]
 
-summary = df.groupby("year")["monthly_amount"].sum().round().astype(int).reset_index()
-total = summary["monthly_amount"].sum()
+# عرض النتائج
+st.subheader("تفاصيل المستحقات الشهرية:")
+st.dataframe(df[["الشهر", "السنة", "النسبة_الشهرية", "الراتب_السنة", "المستحق_هذا_الشهر"]])
 
-st.subheader("المستحقات حسب كل سنة")
-for _, row in summary.iterrows():
-    st.markdown(f"<div style='padding: 10px; background-color: #e1e1e1; border-radius: 5px;'>سنة {row['year']}: {row['monthly_amount']:,} شيكل</div>", unsafe_allow_html=True)
+st.subheader("مجموع المستحقات لكل سنة:")
+st.dataframe(summary)
 
-st.markdown("---")
-st.subheader(f"المجموع الكلي للمستحقات: {total:,} شيكل")
-st.markdown(f"<div style='padding: 15px; background-color: #c1e1c1; border-radius: 10px;'><strong>المجموع الكلي للمستحقات: {total:,} شيكل</strong></div>", unsafe_allow_html=True)
+total = summary["مجموع_المستحقات"].sum()
+st.success(f"المجموع الكلي لجميع المستحقات: {total:,.2f} شيكل")
