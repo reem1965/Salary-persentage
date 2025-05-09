@@ -1,6 +1,42 @@
 import streamlit as st
+import json
+import os
+import pandas as pd
 
-# البيانات الشهرية والنسب التراكمية
+# --- عداد الزوار ---
+VISITOR_FILE = "visitors.json"
+
+# إنشاء ملف العداد إن لم يكن موجودًا
+if not os.path.exists(VISITOR_FILE):
+    with open(VISITOR_FILE, "w") as f:
+        json.dump({"ips": [], "count": 0}, f)
+
+# محاولة الحصول على IP (للتجريب المحلي فقط)
+def get_user_ip():
+    try:
+        ip = st.experimental_get_query_params().get("ip", ["unknown"])[0]
+    except:
+        ip = "unknown"
+    return ip
+
+# تحديث العداد
+def update_visitor_count():
+    ip = get_user_ip()
+    with open(VISITOR_FILE, "r") as f:
+        data = json.load(f)
+    if ip not in data["ips"]:
+        data["ips"].append(ip)
+        data["count"] += 1
+        with open(VISITOR_FILE, "w") as f:
+            json.dump(data, f)
+    return data["count"]
+
+# عرض العداد في رأس الصفحة
+count = update_visitor_count()
+st.markdown(f"### عدد زوار الموقع: **{count}**")
+
+# --- حساب المستحقات ---
+
 months = [
     "Nov-21", "Dec-21",
     "Jan-22", "Feb-22", "Mar-22", "Apr-22", "May-22", "Jun-22", "Jul-22", "Aug-22", "Sep-22", "Oct-22", "Nov-22", "Dec-22",
@@ -17,9 +53,6 @@ cumulative_percentages = [
     788.58, 818.58, 848.58, 948.58
 ]
 
-import pandas as pd
-
-# حساب النسب الشهرية
 df = pd.DataFrame({
     "month": months,
     "cumulative_percentage": cumulative_percentages
@@ -27,24 +60,20 @@ df = pd.DataFrame({
 df["monthly_percentage"] = df["cumulative_percentage"].diff().fillna(df["cumulative_percentage"])
 df["year"] = df["month"].str[-2:].apply(lambda x: int("20" + x) if x != "21" else 2021)
 
-# إدخال الرواتب يدويًا
-st.title("حساب المستحقات حسب كل سنة")
+st.title("حساب المستحقات حسب الراتب السنوي")
 
 years = sorted(df["year"].unique())
 salaries = {}
 for year in years:
     salaries[year] = st.number_input(f"أدخل الراتب لسنة {year}", min_value=0, step=100, value=4500 if year != 2021 else 4450)
 
-# حساب المستحقات
 df["salary"] = df["year"].map(salaries)
 df["monthly_amount"] = df["monthly_percentage"] / 100 * df["salary"]
 
-# تلخيص حسب السنة
 summary = df.groupby("year")["monthly_amount"].sum().round().astype(int).reset_index()
 total = summary["monthly_amount"].sum()
 
-# عرض النتائج
-st.subheader("المستحقات حسب كل سنة:")
+st.subheader("المستحقات حسب كل سنة")
 for _, row in summary.iterrows():
     st.write(f"سنة {row['year']}: {row['monthly_amount']:,} شيكل")
 
