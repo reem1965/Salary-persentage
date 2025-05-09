@@ -3,37 +3,26 @@ import json
 import os
 import pandas as pd
 
-# --- عداد الزوار ---
-VISITOR_FILE = "visitors.json"
+# --- عداد الزوار المحلي ---
+COUNTER_FILE = "counter.json"
 
-# إنشاء ملف العداد إن لم يكن موجودًا
-if not os.path.exists(VISITOR_FILE):
-    with open(VISITOR_FILE, "w") as f:
-        json.dump({"ips": [], "count": 0}, f)
+if not os.path.exists(COUNTER_FILE):
+    with open(COUNTER_FILE, "w") as f:
+        json.dump({"count": 0}, f)
 
-def get_user_ip():
-    try:
-        ip = st.query_params.get("ip", ["unknown"])[0]
-    except:
-        ip = "unknown"
-    return ip
-
-def update_visitor_count():
-    ip = get_user_ip()
-    with open(VISITOR_FILE, "r") as f:
+def increment_counter():
+    with open(COUNTER_FILE, "r") as f:
         data = json.load(f)
-    if ip not in data["ips"]:
-        data["ips"].append(ip)
-        data["count"] += 1
-        with open(VISITOR_FILE, "w") as f:
-            json.dump(data, f)
+    data["count"] += 1
+    with open(COUNTER_FILE, "w") as f:
+        json.dump(data, f)
     return data["count"]
 
-# عرض العداد
-count = update_visitor_count()
-st.markdown(f"### عدد زوار الموقع: **{count}**")
+# عرض عداد الزوار
+count = increment_counter()
+st.markdown(f"### عدد زوار الصفحة: **{count}**")
 
-# --- بيانات النسب والمستحقات ---
+# --- بيانات المستحقات ---
 months = [
     "Nov-21", "Dec-21",
     "Jan-22", "Feb-22", "Mar-22", "Apr-22", "May-22", "Jun-22", "Jul-22", "Aug-22", "Sep-22", "Oct-22", "Nov-22", "Dec-22",
@@ -62,7 +51,7 @@ st.title("حساب المستحقات حسب الراتب السنوي")
 years = sorted(df["year"].unique())
 salaries = {}
 
-# إدخال الراتب لكل سنة داخل مربع
+# إدخال الراتب لكل سنة
 for year in years:
     with st.container():
         salaries[year] = st.number_input(f"أدخل الراتب لسنة {year}", min_value=0, step=100, value=4500 if year != 2021 else 4450)
