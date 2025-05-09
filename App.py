@@ -11,15 +11,13 @@ if not os.path.exists(VISITOR_FILE):
     with open(VISITOR_FILE, "w") as f:
         json.dump({"ips": [], "count": 0}, f)
 
-# محاولة الحصول على IP (للتجريب المحلي فقط)
 def get_user_ip():
     try:
-        ip = st.experimental_get_query_params().get("ip", ["unknown"])[0]
+        ip = st.query_params.get("ip", ["unknown"])[0]
     except:
         ip = "unknown"
     return ip
 
-# تحديث العداد
 def update_visitor_count():
     ip = get_user_ip()
     with open(VISITOR_FILE, "r") as f:
@@ -31,12 +29,11 @@ def update_visitor_count():
             json.dump(data, f)
     return data["count"]
 
-# عرض العداد في رأس الصفحة
+# عرض العداد
 count = update_visitor_count()
 st.markdown(f"### عدد زوار الموقع: **{count}**")
 
-# --- حساب المستحقات ---
-
+# --- بيانات النسب والمستحقات ---
 months = [
     "Nov-21", "Dec-21",
     "Jan-22", "Feb-22", "Mar-22", "Apr-22", "May-22", "Jun-22", "Jul-22", "Aug-22", "Sep-22", "Oct-22", "Nov-22", "Dec-22",
@@ -64,8 +61,11 @@ st.title("حساب المستحقات حسب الراتب السنوي")
 
 years = sorted(df["year"].unique())
 salaries = {}
+
+# إدخال الراتب لكل سنة داخل مربع
 for year in years:
-    salaries[year] = st.number_input(f"أدخل الراتب لسنة {year}", min_value=0, step=100, value=4500 if year != 2021 else 4450)
+    with st.container():
+        salaries[year] = st.number_input(f"أدخل الراتب لسنة {year}", min_value=0, step=100, value=4500 if year != 2021 else 4450)
 
 df["salary"] = df["year"].map(salaries)
 df["monthly_amount"] = df["monthly_percentage"] / 100 * df["salary"]
